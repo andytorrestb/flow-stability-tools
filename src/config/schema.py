@@ -46,6 +46,8 @@ class OutputConfig(BaseModel):
     show_symbolic_in_console: bool = True
     include_symbolic_in_profile_summaries: bool = True
     include_symbolic_latex: bool = False
+    export_sympy_pdf: bool = False
+    sympy_pdf_filename: str = "symbolic_expressions.pdf"
 
 
 class RefinementConfig(BaseModel):

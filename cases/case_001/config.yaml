@@ -17,7 +17,9 @@ output:
   frequency_plot_filename: frequency_vs_alpha.png
   show_symbolic_in_console: true
   include_symbolic_in_profile_summaries: true
-  include_symbolic_latex: false
+  include_symbolic_latex: true
+  export_sympy_pdf: true
+  sympy_pdf_filename: symbolic_expressions.pdf
 refinement:
   enabled: false
 pipeline:

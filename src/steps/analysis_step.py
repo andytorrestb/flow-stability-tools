@@ -16,15 +16,20 @@ class AnalysisStep(Step):
     def __init__(self, config: SimulationConfig) -> None:
         self.config = config
 
+
     def run(self, case: Case, context: Context) -> None:
+        from components.export import export_sympy_pdf
         scan_results = context.get_result("scan_results")
         profiles = scan_results["profiles"]
 
         include_symbolic = self.config.output.include_symbolic_in_profile_summaries
         include_latex = self.config.output.include_symbolic_latex
         show_symbolic_console = self.config.output.show_symbolic_in_console
+        export_sympy_pdf_enabled = getattr(self.config.output, "export_sympy_pdf", False)
+        sympy_pdf_filename = getattr(self.config.output, "sympy_pdf_filename", "symbolic_expressions.pdf")
 
         summaries: dict[str, dict[str, float | str | dict[str, str]]] = {}
+        sympy_latex_data: dict[str, dict[str, str]] = {}
         for profile_name, profile_payload in profiles.items():
             summary = profile_payload["scan"]["summary"]
             omega_r = summary["frequency"]
@@ -54,7 +59,20 @@ class AnalysisStep(Step):
 
                 profile_summary["sympy"] = symbolic_data
 
+                # Collect LaTeX for PDF export if enabled
+                if export_sympy_pdf_enabled:
+                    sympy_latex_data[profile_name] = {
+                        "U_latex": symbolic_data.get("U_latex", ""),
+                        "U_prime_latex": symbolic_data.get("U_prime_latex", ""),
+                        "U_double_prime_latex": symbolic_data.get("U_double_prime_latex", ""),
+                    }
+
             summaries[profile_name] = profile_summary
+
+        # Export PDF if enabled
+        if export_sympy_pdf_enabled and sympy_latex_data:
+            pdf_path = Path(case.results_dir) / sympy_pdf_filename
+            export_sympy_pdf(sympy_latex_data, pdf_path)
 
         analysis_payload = {
             "temporal_convention": scan_results["temporal_convention"],
