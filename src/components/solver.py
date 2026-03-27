@@ -43,10 +43,7 @@ class RayleighStudySolver(Solver):
 
         return {
             "z": [float(v) for v in z],
-            "sympy": {
-                "U": baseflow["U_expr"],
-                "Upp": baseflow["Upp_expr"],
-            },
+            "sympy": baseflow["symbolic"],
             "scan": scan_result,
         }
 

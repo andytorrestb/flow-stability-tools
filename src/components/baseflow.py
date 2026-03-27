@@ -22,7 +22,7 @@ def baseflow_symbolic(profile_name: str) -> tuple[sp.Symbol, sp.Expr, sp.Expr, s
 
 def evaluate_baseflow(profile_name: str, z_grid: np.ndarray) -> dict[str, np.ndarray | str]:
     """Evaluate U and U'' on the collocation grid, handling scalar lambdify outputs."""
-    z_sym, U_expr, _Up_expr, Upp_expr = baseflow_symbolic(profile_name)
+    z_sym, U_expr, Up_expr, Upp_expr = baseflow_symbolic(profile_name)
     U_fun = sp.lambdify(z_sym, U_expr, "numpy")
     Upp_fun = sp.lambdify(z_sym, Upp_expr, "numpy")
 
@@ -35,6 +35,16 @@ def evaluate_baseflow(profile_name: str, z_grid: np.ndarray) -> dict[str, np.nda
     return {
         "U": U_vals,
         "Upp": Upp_vals,
-        "U_expr": str(U_expr),
-        "Upp_expr": str(Upp_expr),
+        "symbolic": {
+            "symbol": str(z_sym),
+            "U": str(U_expr),
+            "U_prime": str(Up_expr),
+            "U_double_prime": str(Upp_expr),
+            "U_pretty": sp.pretty(U_expr, use_unicode=False),
+            "U_prime_pretty": sp.pretty(Up_expr, use_unicode=False),
+            "U_double_prime_pretty": sp.pretty(Upp_expr, use_unicode=False),
+            "U_latex": sp.latex(U_expr),
+            "U_prime_latex": sp.latex(Up_expr),
+            "U_double_prime_latex": sp.latex(Upp_expr),
+        },
     }

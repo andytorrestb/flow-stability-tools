@@ -20,17 +20,41 @@ class AnalysisStep(Step):
         scan_results = context.get_result("scan_results")
         profiles = scan_results["profiles"]
 
-        summaries: dict[str, dict[str, float | str]] = {}
+        include_symbolic = self.config.output.include_symbolic_in_profile_summaries
+        include_latex = self.config.output.include_symbolic_latex
+        show_symbolic_console = self.config.output.show_symbolic_in_console
+
+        summaries: dict[str, dict[str, float | str | dict[str, str]]] = {}
         for profile_name, profile_payload in profiles.items():
             summary = profile_payload["scan"]["summary"]
             omega_r = summary["frequency"]
             omega_i = summary["growth_rate"]
-            summaries[profile_name] = {
+            profile_summary: dict[str, float | str | dict[str, str]] = {
                 "alpha_star": summary["alpha_star"],
                 "omega_star": f"{omega_r} + 1j*{omega_i}",
                 "growth_rate": omega_i,
                 "frequency": omega_r,
             }
+
+            if include_symbolic:
+                sympy_payload = profile_payload.get("sympy", {})
+                symbolic_data: dict[str, str] = {
+                    "symbol": str(sympy_payload.get("symbol", "z")),
+                    "U": str(sympy_payload.get("U", "")),
+                    "U_prime": str(sympy_payload.get("U_prime", "")),
+                    "U_double_prime": str(sympy_payload.get("U_double_prime", "")),
+                    "U_pretty": str(sympy_payload.get("U_pretty", "")),
+                    "U_prime_pretty": str(sympy_payload.get("U_prime_pretty", "")),
+                    "U_double_prime_pretty": str(sympy_payload.get("U_double_prime_pretty", "")),
+                }
+                if include_latex:
+                    symbolic_data["U_latex"] = str(sympy_payload.get("U_latex", ""))
+                    symbolic_data["U_prime_latex"] = str(sympy_payload.get("U_prime_latex", ""))
+                    symbolic_data["U_double_prime_latex"] = str(sympy_payload.get("U_double_prime_latex", ""))
+
+                profile_summary["sympy"] = symbolic_data
+
+            summaries[profile_name] = profile_summary
 
         analysis_payload = {
             "temporal_convention": scan_results["temporal_convention"],
@@ -63,6 +87,20 @@ class AnalysisStep(Step):
                 json.dump(metadata, handle, indent=2)
 
         for profile_name, summary in summaries.items():
+            if show_symbolic_console:
+                sympy_payload = summary.get("sympy")
+                if isinstance(sympy_payload, dict):
+                    print("=" * 80)
+                    print(f"Profile: {profile_name}")
+                    print("SymPy U(z):")
+                    print(sympy_payload.get("U_pretty") or sympy_payload.get("U", ""))
+                    print("SymPy U'(z):")
+                    print(sympy_payload.get("U_prime_pretty") or sympy_payload.get("U_prime", ""))
+                    print("SymPy U''(z):")
+                    print(sympy_payload.get("U_double_prime_pretty") or sympy_payload.get("U_double_prime", ""))
+                    print(f"Symbol used: {sympy_payload.get('symbol', 'z')}")
+                    print("=" * 80)
+
             print(f"[{profile_name}] alpha_star={summary['alpha_star']}")
             print(f"[{profile_name}] omega_star={summary['omega_star']}")
             print(f"[{profile_name}] growth_rate={summary['growth_rate']}")

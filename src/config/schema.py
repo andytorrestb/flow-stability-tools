@@ -43,6 +43,9 @@ class OutputConfig(BaseModel):
     enable_plots: bool = True
     growth_plot_filename: str = "growth_vs_alpha.png"
     frequency_plot_filename: str = "frequency_vs_alpha.png"
+    show_symbolic_in_console: bool = True
+    include_symbolic_in_profile_summaries: bool = True
+    include_symbolic_latex: bool = False
 
 
 class RefinementConfig(BaseModel):
