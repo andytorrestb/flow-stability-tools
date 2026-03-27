@@ -1,0 +1,28 @@
+case_name: case_001
+solver:
+  type: rayleigh_inviscid
+  profiles:
+    - tanh_shear
+    - parabolic
+numerical:
+  L: 10.0
+  N: 120
+  eigenvalue_mag_threshold: 1000.0
+alpha_scan:
+  alpha_min: 0.1
+  alpha_max: 1.5
+  alpha_count: 40
+output:
+  enable_plots: true
+  growth_plot_filename: growth_vs_alpha.png
+  frequency_plot_filename: frequency_vs_alpha.png
+refinement:
+  enabled: true
+  profile: parabolic
+  N_base: 60
+  multiplier: 2
+pipeline:
+  steps:
+    - setup
+    - solve
+    - analysis

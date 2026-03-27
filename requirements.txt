@@ -2,3 +2,5 @@ numpy
 scipy
 sympy
 matplotlib
+pydantic
+PyYAML
