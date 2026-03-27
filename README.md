@@ -43,6 +43,7 @@ For each configured profile, the case computes:
 - omega_star
 - growth_rate
 - frequency
+- symbolic baseflow expressions U(z), U'(z), U''(z)
 
 ## Project Layout
 
@@ -85,6 +86,9 @@ Config supports:
 	- enable_plots
 	- growth_plot_filename
 	- frequency_plot_filename
+	- show_symbolic_in_console
+	- include_symbolic_in_profile_summaries
+	- include_symbolic_latex
 - refinement:
 	- enabled
 	- profile
@@ -101,6 +105,13 @@ After a successful run, the case writes artifacts to cases/case_001/results:
 - profile_summaries.json
 - growth_vs_alpha.png (if plotting enabled)
 - frequency_vs_alpha.png (if plotting enabled)
+
+When symbolic reporting is enabled, profile summaries include a `sympy` section with:
+
+- symbol
+- U, U_prime, U_double_prime
+- U_pretty, U_prime_pretty, U_double_prime_pretty
+- latex forms when `include_symbolic_latex` is true
 
 ## Notes
 
