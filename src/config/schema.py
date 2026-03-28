@@ -48,6 +48,8 @@ class OutputConfig(BaseModel):
     include_symbolic_latex: bool = False
     export_sympy_pdf: bool = False
     sympy_pdf_filename: str = "symbolic_expressions.pdf"
+    export_vtk: bool = False
+    vtk_filename_pattern: str = "{profile}_field.vtk"
 
 
 class RefinementConfig(BaseModel):

@@ -19,6 +19,8 @@ class AnalysisStep(Step):
 
     def run(self, case: Case, context: Context) -> None:
         from components.export import export_sympy_pdf
+        from components.vtk_export import export_profile_to_vtk
+        import numpy as np
         scan_results = context.get_result("scan_results")
         profiles = scan_results["profiles"]
 
@@ -27,6 +29,8 @@ class AnalysisStep(Step):
         show_symbolic_console = self.config.output.show_symbolic_in_console
         export_sympy_pdf_enabled = getattr(self.config.output, "export_sympy_pdf", False)
         sympy_pdf_filename = getattr(self.config.output, "sympy_pdf_filename", "symbolic_expressions.pdf")
+        export_vtk_enabled = getattr(self.config.output, "export_vtk", False)
+        vtk_filename_pattern = getattr(self.config.output, "vtk_filename_pattern", "{profile}_field.vtk")
 
         summaries: dict[str, dict[str, float | str | dict[str, str]]] = {}
         sympy_latex_data: dict[str, dict[str, str]] = {}
@@ -68,6 +72,28 @@ class AnalysisStep(Step):
                     }
 
             summaries[profile_name] = profile_summary
+
+            # VTK export for each profile
+            if export_vtk_enabled:
+                try:
+                    z = np.array(profile_payload["z"])
+                    U = None
+                    Upp = None
+                    sympy_payload = profile_payload.get("sympy", {})
+                    # Try to get U and Upp from baseflow evaluation if available
+                    # If not, skip
+                    if "U" in sympy_payload and "Upp" in profile_payload:
+                        U = np.array(profile_payload["U"])
+                        Upp = np.array(profile_payload["Upp"])
+                    # If not present, skip
+                    if U is None or Upp is None:
+                        continue
+                    fields = {"U": U, "Upp": Upp}
+                    vtk_filename = vtk_filename_pattern.format(profile=profile_name)
+                    vtk_path = Path(case.results_dir) / vtk_filename
+                    export_profile_to_vtk(z, fields, vtk_path, profile_name=profile_name)
+                except Exception as e:
+                    print(f"[VTK Export] Failed for {profile_name}: {e}")
 
         # Export PDF if enabled
         if export_sympy_pdf_enabled and sympy_latex_data:
