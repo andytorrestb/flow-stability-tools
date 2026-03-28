@@ -20,6 +20,7 @@ class AnalysisStep(Step):
     def run(self, case: Case, context: Context) -> None:
         from components.export import export_sympy_pdf
         from components.vtk_export import export_profile_to_vtk
+        from components.time_series_export import reconstruct_time_series, export_time_series_vtk
         import numpy as np
         scan_results = context.get_result("scan_results")
         profiles = scan_results["profiles"]
@@ -73,27 +74,43 @@ class AnalysisStep(Step):
 
             summaries[profile_name] = profile_summary
 
-            # VTK export for each profile
+            # VTK export for each profile (static fields)
             if export_vtk_enabled:
                 try:
                     z = np.array(profile_payload["z"])
                     U = None
                     Upp = None
                     sympy_payload = profile_payload.get("sympy", {})
-                    # Try to get U and Upp from baseflow evaluation if available
-                    # If not, skip
-                    if "U" in sympy_payload and "Upp" in profile_payload:
+                    if "U" in profile_payload and "Upp" in profile_payload:
                         U = np.array(profile_payload["U"])
                         Upp = np.array(profile_payload["Upp"])
-                    # If not present, skip
-                    if U is None or Upp is None:
-                        continue
-                    fields = {"U": U, "Upp": Upp}
-                    vtk_filename = vtk_filename_pattern.format(profile=profile_name)
-                    vtk_path = Path(case.results_dir) / vtk_filename
-                    export_profile_to_vtk(z, fields, vtk_path, profile_name=profile_name)
+                    if U is not None and Upp is not None:
+                        fields = {"U": U, "Upp": Upp}
+                        vtk_filename = vtk_filename_pattern.format(profile=profile_name)
+                        vtk_path = Path(case.results_dir) / vtk_filename
+                        export_profile_to_vtk(z, fields, vtk_path, profile_name=profile_name)
                 except Exception as e:
                     print(f"[VTK Export] Failed for {profile_name}: {e}")
+
+            # Time series VTK export for each profile (dominant mode)
+            if export_vtk_enabled:
+                try:
+                    # Use dominant mode: omega_star, eigenfunction (if available)
+                    # For demonstration, use U as a stand-in for eigenfunction
+                    z = np.array(profile_payload["z"])
+                    if "U" in profile_payload:
+                        eigenfunction = np.array(profile_payload["U"])
+                    else:
+                        continue
+                    omega_r = summary["frequency"]
+                    omega_i = summary["growth_rate"]
+                    omega = omega_r + 1j * omega_i
+                    t_grid = np.linspace(0, 20, 101)  # 101 time steps from t=0 to t=20
+                    qzt = reconstruct_time_series(z, eigenfunction, omega, t_grid)
+                    ts_dir = Path(case.results_dir) / f"{profile_name}_time_series"
+                    export_time_series_vtk(z, qzt, t_grid, ts_dir, base_filename="q_time_series")
+                except Exception as e:
+                    print(f"[Time Series VTK Export] Failed for {profile_name}: {e}")
 
         # Export PDF if enabled
         if export_sympy_pdf_enabled and sympy_latex_data:
