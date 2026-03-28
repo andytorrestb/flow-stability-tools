@@ -76,8 +76,15 @@ def read_vtk_time_series(time_series_dir, field="q_real"):
     t_grid = np.array(t_grid)
     return z, data, t_grid
 
-def plot_vtk_time_series_to_mp4(time_series_dir, field="q_real", output_mp4="time_series.mp4",
-                                figsize=(8, 4), interval=80, dpi=180, style="darkgrid"):
+def plot_vtk_time_series_to_mp4(
+    time_series_dir,
+    field="q_real",
+    output_mp4="time_series.mp4",
+    figsize=(8, 4),
+    interval=80,
+    dpi=180,
+    style="darkgrid",
+):
     """
     Reads a VTK time series and creates an .mp4 animation of the field evolution.
     """

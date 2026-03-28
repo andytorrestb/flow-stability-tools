@@ -34,8 +34,14 @@ class AnalysisStep(Step):
         vtk_filename_pattern = getattr(self.config.output, "vtk_filename_pattern", "{profile}_field.vtk")
         export_time_series_mp4_enabled = getattr(self.config.output, "export_time_series_mp4", False)
         time_series_mp4_filename = getattr(self.config.output, "time_series_mp4_filename", "time_series.mp4")
+        velocity_time_series_mp4_filename = getattr(
+            self.config.output, "velocity_time_series_mp4_filename", "velocity_time_series.mp4"
+        )
+        overlay_initial_profile = getattr(self.config.output, "overlay_initial_profile", False)
+        initial_profile_label = getattr(self.config.output, "initial_profile_label", "Initial velocity profile")
         # Import animation function only if needed
         if export_time_series_mp4_enabled:
+            from visualization.baseflow_time_series_plot import plot_baseflow_time_series_to_mp4
             from visualization.vtk_time_series_plot import plot_vtk_time_series_to_mp4
 
         summaries: dict[str, dict[str, float | str | dict[str, str]]] = {}
@@ -101,6 +107,12 @@ class AnalysisStep(Step):
             if export_vtk_enabled:
                 try:
                     z = np.array(profile_payload["z"])
+                    initial_profile = None
+                    if overlay_initial_profile:
+                        if "U" in profile_payload:
+                            initial_profile = np.array(profile_payload["U"])
+                        else:
+                            print(f"[DEBUG] Initial profile not available for {profile_name}; skipping overlay")
                     eigenfunction = None
                     if "dominant_eigenfunction" in profile_payload and profile_payload["dominant_eigenfunction"] is not None:
                         # Convert from [[real, imag], ...] to complex numpy array
@@ -135,6 +147,7 @@ class AnalysisStep(Step):
                     # Export .mp4 animation if enabled
                     if export_time_series_mp4_enabled:
                         try:
+                            # Disturbance animation q(z,t) (original plot)
                             plot_vtk_time_series_to_mp4(
                                 ts_dir,
                                 field="q_real",
@@ -142,7 +155,22 @@ class AnalysisStep(Step):
                                 figsize=(8, 4),
                                 interval=80,
                                 dpi=180,
-                                style="darkgrid"
+                                style="darkgrid",
+                            )
+                            # Velocity animation U(z,t) = U_base + Re(q), with optional overlay
+                            U_base = np.array(profile_payload.get("U", np.zeros_like(z)))
+                            U_total = U_base[:, None] + np.real(qzt)
+                            plot_baseflow_time_series_to_mp4(
+                                z,
+                                U_total,
+                                t_grid,
+                                output_mp4=Path(ts_dir) / velocity_time_series_mp4_filename,
+                                figsize=(8, 4),
+                                interval=80,
+                                dpi=180,
+                                style="darkgrid",
+                                initial_profile=initial_profile,
+                                initial_profile_label=initial_profile_label,
                             )
                         except Exception as e:
                             print(f"[Time Series MP4 Export] Failed for {profile_name}: {e}")

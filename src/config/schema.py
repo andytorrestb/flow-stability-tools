@@ -52,6 +52,9 @@ class OutputConfig(BaseModel):
     vtk_filename_pattern: str = "{profile}_field.vtk"
     export_time_series_mp4: bool = False
     time_series_mp4_filename: str = "time_series.mp4"
+    velocity_time_series_mp4_filename: str = "velocity_time_series.mp4"
+    overlay_initial_profile: bool = False
+    initial_profile_label: str = "Initial velocity profile"
 
 
 class RefinementConfig(BaseModel):

@@ -16,6 +16,8 @@ output:
   time_series_mp4_filename: time_series.mp4
   export_vtk: true
   vtk_filename_pattern: "{profile}_field.vtk"
+  overlay_initial_profile: true
+  initial_profile_label: "Initial velocity profile"
   enable_plots: true
   growth_plot_filename: growth_vs_alpha.png
   frequency_plot_filename: frequency_vs_alpha.png
