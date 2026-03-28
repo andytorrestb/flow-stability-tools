@@ -32,6 +32,11 @@ class AnalysisStep(Step):
         sympy_pdf_filename = getattr(self.config.output, "sympy_pdf_filename", "symbolic_expressions.pdf")
         export_vtk_enabled = getattr(self.config.output, "export_vtk", False)
         vtk_filename_pattern = getattr(self.config.output, "vtk_filename_pattern", "{profile}_field.vtk")
+        export_time_series_mp4_enabled = getattr(self.config.output, "export_time_series_mp4", False)
+        time_series_mp4_filename = getattr(self.config.output, "time_series_mp4_filename", "time_series.mp4")
+        # Import animation function only if needed
+        if export_time_series_mp4_enabled:
+            from visualization.vtk_time_series_plot import plot_vtk_time_series_to_mp4
 
         summaries: dict[str, dict[str, float | str | dict[str, str]]] = {}
         sympy_latex_data: dict[str, dict[str, str]] = {}
@@ -95,20 +100,52 @@ class AnalysisStep(Step):
             # Time series VTK export for each profile (dominant mode)
             if export_vtk_enabled:
                 try:
-                    # Use dominant mode: omega_star, eigenfunction (if available)
-                    # For demonstration, use U as a stand-in for eigenfunction
                     z = np.array(profile_payload["z"])
-                    if "U" in profile_payload:
-                        eigenfunction = np.array(profile_payload["U"])
+                    eigenfunction = None
+                    if "dominant_eigenfunction" in profile_payload and profile_payload["dominant_eigenfunction"] is not None:
+                        # Convert from [[real, imag], ...] to complex numpy array
+                        ef_list = profile_payload["dominant_eigenfunction"]
+                        eigenfunction = np.array([complex(r, i) for r, i in ef_list])
+                        # Optionally normalize for visibility
+                        if np.max(np.abs(eigenfunction)) > 0:
+                            eigenfunction = eigenfunction / np.max(np.abs(eigenfunction))
                     else:
+                        print(f"[DEBUG] Skipping time series export for {profile_name}: dominant_eigenfunction is None")
                         continue
                     omega_r = summary["frequency"]
                     omega_i = summary["growth_rate"]
                     omega = omega_r + 1j * omega_i
                     t_grid = np.linspace(0, 20, 101)  # 101 time steps from t=0 to t=20
-                    qzt = reconstruct_time_series(z, eigenfunction, omega, t_grid)
+                    print(f"[DEBUG] Exporting time series for {profile_name}: z.shape={z.shape}, eigenfunction.shape={eigenfunction.shape}, omega={omega}, t_grid.shape={t_grid.shape}")
+                    # Pad eigenfunction and qzt to match z length (Chebyshev grid)
+                    n_z = len(z)
+                    n_int = len(eigenfunction)
+                    if n_int == n_z - 2:
+                        # Pad with zeros at boundaries
+                        eigenfunction_padded = np.zeros(n_z, dtype=complex)
+                        eigenfunction_padded[1:-1] = eigenfunction
+                    else:
+                        eigenfunction_padded = eigenfunction
+                    qzt = reconstruct_time_series(z, eigenfunction_padded, omega, t_grid)
+                    print(f"[DEBUG] qzt.shape={qzt.shape}, qzt.max={np.max(np.abs(qzt))}, qzt.min={np.min(np.abs(qzt))}")
                     ts_dir = Path(case.results_dir) / f"{profile_name}_time_series"
                     export_time_series_vtk(z, qzt, t_grid, ts_dir, base_filename="q_time_series")
+                    print(f"[DEBUG] Time series VTK export complete for {profile_name} at {ts_dir}")
+
+                    # Export .mp4 animation if enabled
+                    if export_time_series_mp4_enabled:
+                        try:
+                            plot_vtk_time_series_to_mp4(
+                                ts_dir,
+                                field="q_real",
+                                output_mp4=time_series_mp4_filename,
+                                figsize=(8, 4),
+                                interval=80,
+                                dpi=180,
+                                style="darkgrid"
+                            )
+                        except Exception as e:
+                            print(f"[Time Series MP4 Export] Failed for {profile_name}: {e}")
                 except Exception as e:
                     print(f"[Time Series VTK Export] Failed for {profile_name}: {e}")
 

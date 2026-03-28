@@ -12,6 +12,8 @@ alpha_scan:
   alpha_max: 1.5
   alpha_count: 40
 output:
+  export_time_series_mp4: true
+  time_series_mp4_filename: time_series.mp4
   export_vtk: true
   vtk_filename_pattern: "{profile}_field.vtk"
   enable_plots: true

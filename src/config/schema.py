@@ -50,6 +50,8 @@ class OutputConfig(BaseModel):
     sympy_pdf_filename: str = "symbolic_expressions.pdf"
     export_vtk: bool = False
     vtk_filename_pattern: str = "{profile}_field.vtk"
+    export_time_series_mp4: bool = False
+    time_series_mp4_filename: str = "time_series.mp4"
 
 
 class RefinementConfig(BaseModel):

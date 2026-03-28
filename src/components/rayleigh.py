@@ -23,7 +23,7 @@ def solve_rayleigh_for_alpha(
     A_in = A[interior, interior]
     B_in = B[interior, interior]
 
-    c_raw, _eigvecs = eig(A_in, B_in)
+    c_raw, eigvecs = eig(A_in, B_in)
     omega_raw = alpha * c_raw
 
     finite = np.isfinite(c_raw.real) & np.isfinite(c_raw.imag)
@@ -32,8 +32,10 @@ def solve_rayleigh_for_alpha(
 
     c_vals = c_raw[keep]
     omega_vals = omega_raw[keep]
+    eigvecs_kept = eigvecs[:, keep]
 
     return {
         "c": c_vals,
         "omega": omega_vals,
+        "eigvecs": eigvecs_kept,
     }

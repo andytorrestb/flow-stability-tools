@@ -33,6 +33,10 @@ class RayleighStudySolver(Solver):
         z, _D, D2 = chebyshev_matrices(N=N, L=numerical.L)
         baseflow = evaluate_baseflow(profile_name=profile_name, z_grid=z)
 
+        # Ensure U and Upp are real-valued lists for JSON
+        def to_real_list(arr):
+            return [float(np.real(x)) for x in arr]
+
         scan_result = alpha_scan(
             alpha_values=alpha_values,
             U_vals=baseflow["U"],
@@ -41,12 +45,29 @@ class RayleighStudySolver(Solver):
             magnitude_threshold=numerical.eigenvalue_mag_threshold,
         )
 
+        # Recursively convert any complex numbers in scan_result to floats or lists
+        def sanitize(obj):
+            if isinstance(obj, dict):
+                return {k: sanitize(v) for k, v in obj.items()}
+            elif isinstance(obj, list):
+                return [sanitize(v) for v in obj]
+            elif isinstance(obj, complex):
+                return float(obj.real)
+            else:
+                return obj
+
+        scan_result_sanitized = sanitize(scan_result)
+
+        # Extract the dominant eigenfunction for the most unstable mode
+        eigenfunction_star = scan_result_sanitized["summary"].get("eigenfunction_star")
+
         return {
-            "z": [float(v) for v in z],
-            "U": [float(u) for u in baseflow["U"].real],
-            "Upp": [float(u) for u in baseflow["Upp"].real],
+            "z": to_real_list(z),
+            "U": to_real_list(baseflow["U"]),
+            "Upp": to_real_list(baseflow["Upp"]),
             "sympy": baseflow["symbolic"],
-            "scan": scan_result,
+            "scan": scan_result_sanitized,
+            "dominant_eigenfunction": eigenfunction_star,
         }
 
     def _refinement_check(self) -> dict:
