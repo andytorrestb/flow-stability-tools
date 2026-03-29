@@ -26,6 +26,7 @@ output:
   include_symbolic_latex: true
   export_sympy_pdf: true
   sympy_pdf_filename: symbolic_expressions.pdf
+  perturbation_amplitude: 1.0
 refinement:
   enabled: true
   profile: parabolic

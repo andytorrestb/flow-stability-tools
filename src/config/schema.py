@@ -53,6 +53,7 @@ class OutputConfig(BaseModel):
     export_time_series_mp4: bool = False
     time_series_mp4_filename: str = "time_series.mp4"
     velocity_time_series_mp4_filename: str = "velocity_time_series.mp4"
+    perturbation_amplitude: float = 1.0e-3
     overlay_initial_profile: bool = False
     initial_profile_label: str = "Initial velocity profile"
 

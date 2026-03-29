@@ -20,7 +20,12 @@ class AnalysisStep(Step):
     def run(self, case: Case, context: Context) -> None:
         from components.export import export_sympy_pdf
         from components.vtk_export import export_profile_to_vtk
-        from components.time_series_export import reconstruct_time_series, export_time_series_vtk
+        from components.time_series_export import (
+            reconstruct_time_series,
+            reconstruct_velocity_time_series,
+            export_time_series_vtk,
+        )
+        from components.spectral import chebyshev_matrices
         import numpy as np
         scan_results = context.get_result("scan_results")
         profiles = scan_results["profiles"]
@@ -37,6 +42,7 @@ class AnalysisStep(Step):
         velocity_time_series_mp4_filename = getattr(
             self.config.output, "velocity_time_series_mp4_filename", "velocity_time_series.mp4"
         )
+        perturbation_amplitude = getattr(self.config.output, "perturbation_amplitude", 1.0e-3)
         overlay_initial_profile = getattr(self.config.output, "overlay_initial_profile", False)
         initial_profile_label = getattr(self.config.output, "initial_profile_label", "Initial velocity profile")
         # Import animation function only if needed
@@ -115,12 +121,23 @@ class AnalysisStep(Step):
                             print(f"[DEBUG] Initial profile not available for {profile_name}; skipping overlay")
                     eigenfunction = None
                     if "dominant_eigenfunction" in profile_payload and profile_payload["dominant_eigenfunction"] is not None:
-                        # Convert from [[real, imag], ...] to complex numpy array
                         ef_list = profile_payload["dominant_eigenfunction"]
                         eigenfunction = np.array([complex(r, i) for r, i in ef_list])
-                        # Optionally normalize for visibility
-                        if np.max(np.abs(eigenfunction)) > 0:
-                            eigenfunction = eigenfunction / np.max(np.abs(eigenfunction))
+                        # Validate and pad to match Chebyshev grid length
+                        n_z = len(z)
+                        n_int = len(eigenfunction)
+                        if n_int == n_z - 2:
+                            eigenfunction_padded = np.zeros(n_z, dtype=complex)
+                            eigenfunction_padded[1:-1] = eigenfunction
+                        elif n_int == n_z:
+                            eigenfunction_padded = eigenfunction
+                        else:
+                            raise ValueError(
+                                f"dominant_eigenfunction length {n_int} incompatible with z length {n_z} (expected n_z or n_z-2)"
+                            )
+                        # Normalize for stable visualization
+                        if np.max(np.abs(eigenfunction_padded)) > 0:
+                            eigenfunction_padded = eigenfunction_padded / np.max(np.abs(eigenfunction_padded))
                     else:
                         print(f"[DEBUG] Skipping time series export for {profile_name}: dominant_eigenfunction is None")
                         continue
@@ -128,26 +145,50 @@ class AnalysisStep(Step):
                     omega_i = summary["growth_rate"]
                     omega = omega_r + 1j * omega_i
                     t_grid = np.linspace(0, 20, 101)  # 101 time steps from t=0 to t=20
-                    print(f"[DEBUG] Exporting time series for {profile_name}: z.shape={z.shape}, eigenfunction.shape={eigenfunction.shape}, omega={omega}, t_grid.shape={t_grid.shape}")
-                    # Pad eigenfunction and qzt to match z length (Chebyshev grid)
-                    n_z = len(z)
-                    n_int = len(eigenfunction)
-                    if n_int == n_z - 2:
-                        # Pad with zeros at boundaries
-                        eigenfunction_padded = np.zeros(n_z, dtype=complex)
-                        eigenfunction_padded[1:-1] = eigenfunction
-                    else:
-                        eigenfunction_padded = eigenfunction
-                    qzt = reconstruct_time_series(z, eigenfunction_padded, omega, t_grid)
-                    print(f"[DEBUG] qzt.shape={qzt.shape}, qzt.max={np.max(np.abs(qzt))}, qzt.min={np.min(np.abs(qzt))}")
+                    print(
+                        f"[DEBUG] Exporting time series for {profile_name}: z.shape={z.shape}, eigenfunction.shape={eigenfunction_padded.shape}, omega={omega}, t_grid.shape={t_grid.shape}, amplitude={perturbation_amplitude}"
+                    )
+
+                    # Build derivative matrix consistent with the grid
+                    try:
+                        _z_ref, D, _D2 = chebyshev_matrices(N=len(z) - 1, L=self.config.numerical.L)
+                    except Exception as e:
+                        raise RuntimeError(f"Failed to build derivative matrix for time series export: {e}")
+
+                    qzt = reconstruct_time_series(
+                        z,
+                        eigenfunction_padded,
+                        omega,
+                        t_grid,
+                        amplitude=perturbation_amplitude,
+                    )
+                    uzt = reconstruct_velocity_time_series(
+                        z,
+                        eigenfunction_padded,
+                        omega,
+                        t_grid,
+                        amplitude=perturbation_amplitude,
+                        D=D,
+                    )
+
+                    print(
+                        f"[DEBUG] qzt.shape={qzt.shape}, uzt.shape={uzt.shape}, q_max={np.max(np.abs(qzt))}, u_max={np.max(np.abs(uzt))}"
+                    )
+
                     ts_dir = Path(case.results_dir) / f"{profile_name}_time_series"
-                    export_time_series_vtk(z, qzt, t_grid, ts_dir, base_filename="q_time_series")
+                    export_time_series_vtk(
+                        z,
+                        {"q": qzt, "u": uzt},
+                        t_grid,
+                        ts_dir,
+                        base_filename="time_series",
+                    )
                     print(f"[DEBUG] Time series VTK export complete for {profile_name} at {ts_dir}")
 
                     # Export .mp4 animation if enabled
                     if export_time_series_mp4_enabled:
                         try:
-                            # Disturbance animation q(z,t) (original plot)
+                            # Disturbance streamfunction animation
                             plot_vtk_time_series_to_mp4(
                                 ts_dir,
                                 field="q_real",
@@ -157,9 +198,19 @@ class AnalysisStep(Step):
                                 dpi=180,
                                 style="darkgrid",
                             )
-                            # Velocity animation U(z,t) = U_base + Re(q), with optional overlay
+                            # Velocity perturbation animation
+                            plot_vtk_time_series_to_mp4(
+                                ts_dir,
+                                field="u_real",
+                                output_mp4=velocity_time_series_mp4_filename,
+                                figsize=(8, 4),
+                                interval=80,
+                                dpi=180,
+                                style="darkgrid",
+                            )
+                            # Velocity overlay: U(z,t) = U_base + Re(u)
                             U_base = np.array(profile_payload.get("U", np.zeros_like(z)))
-                            U_total = U_base[:, None] + np.real(qzt)
+                            U_total = U_base[:, None] + np.real(uzt)
                             plot_baseflow_time_series_to_mp4(
                                 z,
                                 U_total,
