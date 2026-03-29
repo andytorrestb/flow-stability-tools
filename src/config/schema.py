@@ -5,7 +5,14 @@ from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 
-BaseflowProfile = Literal["tanh_shear", "parabolic"]
+BaseflowProfile = Literal[
+    "tanh_shear",
+    "parabolic",
+    "bickley_jet",
+    "wake_deficit",
+    "asymmetric_mixing_layer",
+    "double_shear_layer",
+]
 
 
 class SolverConfig(BaseModel):

@@ -19,6 +19,15 @@ class Solver(ABC):
 class RayleighStudySolver(Solver):
     """Run profile-wise alpha scans for the inviscid Rayleigh equation."""
 
+    _PROFILE_BEHAVIOR_NOTES = {
+        "tanh_shear": "Inflectional profile may show unstable alpha band.",
+        "parabolic": "No inflection point; robust inviscid instability is not expected.",
+        "bickley_jet": "Jet profile with central shear can support unstable modes.",
+        "wake_deficit": "Wake deficit profile can exhibit shear-driven instability branches.",
+        "asymmetric_mixing_layer": "Unequal stream speeds can shift dominant growth and frequency.",
+        "double_shear_layer": "Two coupled shear interfaces can produce mode competition.",
+    }
+
     def __init__(self, config: SimulationConfig) -> None:
         self.config = config
 
@@ -100,13 +109,15 @@ class RayleighStudySolver(Solver):
         for profile_name in self.config.solver.profiles:
             profile_results[profile_name] = self._scan_profile(profile_name, self.config.numerical.N)
 
+        expected_behavior = {
+            profile_name: self._PROFILE_BEHAVIOR_NOTES.get(profile_name, "No note available.")
+            for profile_name in self.config.solver.profiles
+        }
+
         return {
             "temporal_convention": "q'(x,z,t)=q_hat(z)*exp(i(alpha*x-omega*t)); growth=Im(omega), frequency=Re(omega)",
             "equation": "(U-c)(phi''-alpha^2*phi)-U''*phi=0, c=omega/alpha",
-            "expected_behavior": {
-                "tanh_shear": "Inflectional profile may show unstable alpha band.",
-                "parabolic": "No inflection point; robust inviscid instability is not expected.",
-            },
+            "expected_behavior": expected_behavior,
             "profiles": profile_results,
             "refinement": self._refinement_check(),
         }

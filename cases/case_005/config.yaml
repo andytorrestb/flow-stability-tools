@@ -1,0 +1,36 @@
+case_name: case_005
+solver:
+  type: rayleigh_inviscid
+  profiles:
+    - asymmetric_mixing_layer
+numerical:
+  L: 10.0
+  N: 120
+  eigenvalue_mag_threshold: 1000.0
+alpha_scan:
+  alpha_min: 0.1
+  alpha_max: 1.5
+  alpha_count: 40
+output:
+  export_time_series_mp4: true
+  time_series_mp4_filename: time_series.mp4
+  export_vtk: true
+  vtk_filename_pattern: "{profile}_field.vtk"
+  overlay_initial_profile: true
+  initial_profile_label: "Initial velocity profile"
+  enable_plots: true
+  growth_plot_filename: growth_vs_alpha.png
+  frequency_plot_filename: frequency_vs_alpha.png
+  show_symbolic_in_console: true
+  include_symbolic_in_profile_summaries: true
+  include_symbolic_latex: true
+  export_sympy_pdf: true
+  sympy_pdf_filename: symbolic_expressions.pdf
+  perturbation_amplitude: 0.1
+refinement:
+  enabled: false
+pipeline:
+  steps:
+    - setup
+    - solve
+    - analysis

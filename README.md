@@ -6,6 +6,10 @@ The current implementation runs a case pipeline with strict configuration valida
 
 - tanh_shear: U(z) = 0.5 * (1 + tanh(z))
 - parabolic: U(z) = z^2
+- bickley_jet: U(z) = sech(z)^2
+- wake_deficit: U(z) = 1 - 0.6 * sech(z)^2
+- asymmetric_mixing_layer: U(z) = 0.35 + 0.65 * tanh(z)
+- double_shear_layer: U(z) = 0.5 * [tanh(2*(z+1)) - tanh(2*(z-1))]
 
 ## Current Functionality
 
@@ -54,6 +58,7 @@ For each configured profile, the case computes:
 - src/steps: setup, solve, analysis
 - src/runners: case runner orchestration
 - cases/case_001: runnable example case
+- cases/case_003..case_006: profile-specific validation cases for newly added profiles
 
 ## Run the Example Case
 
@@ -65,6 +70,16 @@ python -m pip install -r requirements.txt
 
 python cases/case_001/run.py
 
+## Run Regression Checks Across All Cases
+
+To execute every case folder under `cases/` and validate core artifacts:
+
+python run_all_cases_regression.py
+
+To run only specific cases:
+
+python run_all_cases_regression.py --case case_001 --case case_003
+
 ## Case Configuration
 
 Primary config file: cases/case_001/config.yaml
@@ -73,7 +88,7 @@ Config supports:
 
 - solver:
 	- type: rayleigh_inviscid
-	- profiles: [tanh_shear, parabolic]
+	- profiles: [tanh_shear, parabolic, bickley_jet, wake_deficit, asymmetric_mixing_layer, double_shear_layer]
 - numerical:
 	- L
 	- N

@@ -12,6 +12,16 @@ def baseflow_symbolic(profile_name: str) -> tuple[sp.Symbol, sp.Expr, sp.Expr, s
         U = sp.Rational(1, 2) * (1 + sp.tanh(z))
     elif profile_name == "parabolic":
         U = z**2
+    elif profile_name == "bickley_jet":
+        U = sp.sech(z) ** 2
+    elif profile_name == "wake_deficit":
+        U = 1 - sp.Rational(3, 5) * sp.sech(z) ** 2
+    elif profile_name == "asymmetric_mixing_layer":
+        U = sp.Rational(7, 20) + sp.Rational(13, 20) * sp.tanh(z)
+    elif profile_name == "double_shear_layer":
+        U = sp.Rational(1, 2) * (
+            sp.tanh(2 * (z + 1)) - sp.tanh(2 * (z - 1))
+        )
     else:
         raise ValueError(f"Unsupported baseflow profile: {profile_name}")
 
