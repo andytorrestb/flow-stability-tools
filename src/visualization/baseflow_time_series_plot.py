@@ -35,25 +35,25 @@ def plot_baseflow_time_series_to_mp4(
                 f"initial_profile shape {initial_profile_arr.shape} does not match z shape {z.shape}"
             )
         initial_line, = ax.plot(
-            z,
             initial_profile_arr,
+            z,
             initial_profile_style,
             lw=1.5,
             color=initial_profile_color,
             label=initial_profile_label,
         )
-    ax.set_xlim(z.min(), z.max())
-    y_min, y_max = np.min(Uzt), np.max(Uzt)
+    x_min, x_max = np.min(Uzt), np.max(Uzt)
     if initial_profile_arr is not None:
-        y_min = min(y_min, np.min(initial_profile_arr))
-        y_max = max(y_max, np.max(initial_profile_arr))
-    if np.isclose(y_min, y_max):
-        y_center = 0.5 * (y_min + y_max)
-        y_range = max(1e-3, abs(y_center) * 0.1)
-        y_min, y_max = y_center - y_range, y_center + y_range
-    ax.set_ylim(y_min, y_max)
-    ax.set_xlabel("z")
-    ax.set_ylabel("U(z, t)")
+        x_min = min(x_min, np.min(initial_profile_arr))
+        x_max = max(x_max, np.max(initial_profile_arr))
+    if np.isclose(x_min, x_max):
+        x_center = 0.5 * (x_min + x_max)
+        x_range = max(1e-3, abs(x_center) * 0.1)
+        x_min, x_max = x_center - x_range, x_center + x_range
+    ax.set_xlim(x_min, x_max)
+    ax.set_ylim(z.min(), z.max())
+    ax.set_xlabel("U(z, t)")
+    ax.set_ylabel("z")
     ax.set_title("Base flow time series")
     time_text = ax.text(0.02, 0.95, '', transform=ax.transAxes)
     if initial_line is not None:
@@ -68,7 +68,7 @@ def plot_baseflow_time_series_to_mp4(
         return tuple(artists)
 
     def animate(i):
-        line.set_data(z, Uzt[:, i])
+        line.set_data(Uzt[:, i], z)
         t_val = t_grid[i] if t_grid is not None else i
         time_text.set_text(f"t = {t_val:.2f}")
         artists = [line, time_text]
