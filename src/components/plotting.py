@@ -22,6 +22,56 @@ _SCI_LINESTYLES = ["-", "--", "-.", ":"]
 _SCI_MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
 
+def _prepare_peak_points(profile_results: dict[str, dict[str, list[float] | dict[str, float]]]):
+    """Extract peak growth/frequency per profile for annotations."""
+    peak_points: dict[str, tuple[float, float, float]] = {}
+    for profile_name, payload in profile_results.items():
+        alpha = np.asarray(payload["scan"]["alpha"], dtype=float)
+        growth = np.asarray(payload["scan"]["dominant_growth"], dtype=float)
+        freq = np.asarray(payload["scan"]["dominant_frequency"], dtype=float)
+        finite_mask = np.isfinite(alpha) & np.isfinite(growth)
+        if not np.any(finite_mask):
+            continue
+        valid_idx = np.where(finite_mask)[0]
+        local_idx = int(np.argmax(growth[finite_mask]))
+        idx = int(valid_idx[local_idx])
+        alpha_star = float(alpha[idx])
+        growth_star = float(growth[idx])
+        freq_star = float(freq[idx]) if np.isfinite(freq[idx]) else float("nan")
+        peak_points[profile_name] = (alpha_star, growth_star, freq_star)
+    return peak_points
+
+
+def _annotate_growth(ax: plt.Axes, growth_summary_lines: list[str]) -> None:
+    if not growth_summary_lines:
+        return
+    ax.text(
+        0.02,
+        0.98,
+        "\n".join(growth_summary_lines),
+        transform=ax.transAxes,
+        va="top",
+        ha="left",
+        fontsize=8,
+        bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "alpha": 0.95, "edgecolor": "#bbbbbb"},
+    )
+
+
+def _annotate_frequency(ax: plt.Axes, freq_summary_lines: list[str]) -> None:
+    if not freq_summary_lines:
+        return
+    ax.text(
+        0.98,
+        0.98,
+        "\n".join(freq_summary_lines),
+        transform=ax.transAxes,
+        va="top",
+        ha="right",
+        fontsize=8,
+        bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "alpha": 0.95, "edgecolor": "#bbbbbb"},
+    )
+
+
 def _apply_publication_style() -> None:
     """Set a compact publication-style Matplotlib theme."""
     plt.rcParams.update(
@@ -74,7 +124,7 @@ def create_scan_plots(
     growth_path = output_dir / growth_filename
     freq_path = output_dir / frequency_filename
 
-    peak_points: dict[str, tuple[float, float, float]] = {}
+    peak_points = _prepare_peak_points(profile_results)
     growth_summary_lines: list[str] = []
     ordered_profiles = list(profile_results.keys())
     profile_styles = {name: _series_style(i) for i, name in enumerate(ordered_profiles)}
@@ -99,16 +149,9 @@ def create_scan_plots(
             label=profile_name,
         )
 
-        finite_mask = np.isfinite(alpha) & np.isfinite(growth)
-        if np.any(finite_mask):
-            valid_idx = np.where(finite_mask)[0]
-            local_idx = int(np.argmax(growth[finite_mask]))
-            idx = int(valid_idx[local_idx])
-            alpha_star = float(alpha[idx])
-            growth_star = float(growth[idx])
-            freq_star = float(freq[idx]) if np.isfinite(freq[idx]) else float("nan")
-            peak_points[profile_name] = (alpha_star, growth_star, freq_star)
-
+        peak = peak_points.get(profile_name)
+        if peak is not None:
+            alpha_star, growth_star, freq_star = peak
             ax_g.scatter(
                 [alpha_star],
                 [growth_star],
@@ -129,17 +172,7 @@ def create_scan_plots(
     ax_g.set_ylabel("max omega_i(alpha)")
     ax_g.set_title("Dominant temporal growth vs alpha")
     ax_g.legend(loc="best")
-    if growth_summary_lines:
-        ax_g.text(
-            0.02,
-            0.98,
-            "\n".join(growth_summary_lines),
-            transform=ax_g.transAxes,
-            va="top",
-            ha="left",
-            fontsize=8,
-            bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "alpha": 0.95, "edgecolor": "#bbbbbb"},
-        )
+    _annotate_growth(ax_g, growth_summary_lines)
     fig_g.tight_layout()
     fig_g.savefig(growth_path, bbox_inches="tight")
     plt.close(fig_g)
@@ -188,17 +221,7 @@ def create_scan_plots(
     ax_f.set_title("Dominant-mode frequency vs alpha")
     ax_f.legend(loc="best")
     ax_f.ticklabel_format(axis="y", style="sci", scilimits=(-2, 3))
-    if freq_summary_lines:
-        ax_f.text(
-            0.98,
-            0.98,
-            "\n".join(freq_summary_lines),
-            transform=ax_f.transAxes,
-            va="top",
-            ha="right",
-            fontsize=8,
-            bbox={"boxstyle": "round,pad=0.35", "facecolor": "white", "alpha": 0.95, "edgecolor": "#bbbbbb"},
-        )
+    _annotate_frequency(ax_f, freq_summary_lines)
     fig_f.tight_layout()
     fig_f.savefig(freq_path, bbox_inches="tight")
     plt.close(fig_f)

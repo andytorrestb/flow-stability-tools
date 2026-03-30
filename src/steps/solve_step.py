@@ -5,6 +5,7 @@ from pathlib import Path
 
 from components.plotting import create_scan_plots
 from components.solver import RayleighStudySolver
+from components.artifacts import ArtifactManager
 from core.results import scan_result_to_dict
 from config.schema import SimulationConfig
 from core.case import Case
@@ -23,6 +24,18 @@ class SolveStep(Step):
         result = solver.solve()
         context.scan_results = result
 
+        artifact_manager = ArtifactManager(
+            results_dir=Path(case.results_dir),
+            growth_plot_filename=self.config.output.growth_plot_filename,
+            frequency_plot_filename=self.config.output.frequency_plot_filename,
+            sympy_pdf_filename=getattr(self.config.output, "sympy_pdf_filename", "symbolic_expressions.pdf"),
+            vtk_filename_pattern=getattr(self.config.output, "vtk_filename_pattern", "{profile}_field.vtk"),
+            time_series_mp4_filename=getattr(self.config.output, "time_series_mp4_filename", "time_series.mp4"),
+            velocity_time_series_mp4_filename=getattr(
+                self.config.output, "velocity_time_series_mp4_filename", "velocity_time_series.mp4"
+            ),
+        )
+
         output_path = Path(case.results_dir) / "scan_results.json"
         scan_payload = scan_result_to_dict(result)
         with output_path.open("w", encoding="utf-8") as handle:
@@ -33,8 +46,8 @@ class SolveStep(Step):
             plot_artifacts = create_scan_plots(
                 profile_results=scan_payload["profiles"],
                 output_dir=Path(case.results_dir),
-                growth_filename=self.config.output.growth_plot_filename,
-                frequency_filename=self.config.output.frequency_plot_filename,
+                growth_filename=artifact_manager.growth_plot_filename,
+                frequency_filename=artifact_manager.frequency_plot_filename,
             )
 
         context.plot_artifacts = plot_artifacts
