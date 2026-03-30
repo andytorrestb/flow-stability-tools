@@ -4,8 +4,8 @@ import json
 from pathlib import Path
 
 from components.plotting import create_scan_plots
-from components.solver import RayleighStudySolver
 from components.artifacts import ArtifactManager
+from components.solver_registry import get_solver
 from core.results import scan_result_to_dict
 from config.schema import SimulationConfig
 from core.case import Case
@@ -20,7 +20,7 @@ class SolveStep(Step):
         self.config = config
 
     def run(self, case: Case, context: PipelineContext) -> None:
-        solver = RayleighStudySolver(self.config)
+        solver = get_solver(self.config)
         result = solver.solve()
         context.scan_results = result
 
