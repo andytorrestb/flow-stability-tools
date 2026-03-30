@@ -23,7 +23,6 @@ def export_profile_to_vtk(
     z = np.asarray(z)
     n_points = z.size
     grid = pv.StructuredGrid()
-    # 1D: treat as (n, 1, 1) grid
     grid.points = np.c_[z, np.zeros_like(z), np.zeros_like(z)]
     grid.dimensions = (n_points, 1, 1)
     for key, arr in fields.items():

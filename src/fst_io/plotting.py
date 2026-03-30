@@ -6,16 +6,15 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 
-# Colorblind-safe palette commonly used in scientific plots (Okabe-Ito inspired).
 _SCI_COLORS = [
-    "#0072B2",  # blue
-    "#D55E00",  # vermillion
-    "#009E73",  # bluish green
-    "#CC79A7",  # reddish purple
-    "#E69F00",  # orange
-    "#56B4E9",  # sky blue
-    "#F0E442",  # yellow
-    "#000000",  # black
+    "#0072B2",
+    "#D55E00",
+    "#009E73",
+    "#CC79A7",
+    "#E69F00",
+    "#56B4E9",
+    "#F0E442",
+    "#000000",
 ]
 
 _SCI_LINESTYLES = ["-", "--", "-.", ":"]
@@ -23,7 +22,6 @@ _SCI_MARKERS = ["o", "s", "^", "D", "v", "P", "X", "*"]
 
 
 def _prepare_peak_points(profile_results: dict[str, dict[str, list[float] | dict[str, float]]]):
-    """Extract peak growth/frequency per profile for annotations."""
     peak_points: dict[str, tuple[float, float, float]] = {}
     for profile_name, payload in profile_results.items():
         alpha = np.asarray(payload["scan"]["alpha"], dtype=float)
@@ -73,7 +71,6 @@ def _annotate_frequency(ax: plt.Axes, freq_summary_lines: list[str]) -> None:
 
 
 def _apply_publication_style() -> None:
-    """Set a compact publication-style Matplotlib theme."""
     plt.rcParams.update(
         {
             "figure.dpi": 120,
@@ -94,7 +91,6 @@ def _apply_publication_style() -> None:
 
 
 def _format_publication_axes(ax: plt.Axes) -> None:
-    """Apply consistent publication-style axis formatting."""
     ax.spines["top"].set_visible(False)
     ax.spines["right"].set_visible(False)
     ax.spines["left"].set_linewidth(1.0)
@@ -104,7 +100,6 @@ def _format_publication_axes(ax: plt.Axes) -> None:
 
 
 def _series_style(index: int) -> dict[str, str]:
-    """Return deterministic style for the i-th series."""
     color = _SCI_COLORS[index % len(_SCI_COLORS)]
     linestyle = _SCI_LINESTYLES[index % len(_SCI_LINESTYLES)]
     marker = _SCI_MARKERS[index % len(_SCI_MARKERS)]
@@ -117,7 +112,6 @@ def create_scan_plots(
     growth_filename: str,
     frequency_filename: str,
 ) -> dict[str, str]:
-    """Create and save growth/frequency versus alpha plots across all profiles."""
     _apply_publication_style()
     output_dir.mkdir(parents=True, exist_ok=True)
 

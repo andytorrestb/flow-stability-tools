@@ -1,7 +1,7 @@
 import unittest
 
-from components.solver_registry import SolverRegistry, get_solver
-from components.solver import Solver
+from solvers.solver_registry import SolverRegistry, get_solver
+from solvers.solver import Solver
 from config.schema import SimulationConfig
 
 
@@ -25,7 +25,7 @@ class TestSolverRegistry(unittest.TestCase):
             }
         )
         solver = get_solver(cfg)
-        from components.solver import RayleighStudySolver
+        from solvers.solver import RayleighStudySolver
 
         self.assertIsInstance(solver, RayleighStudySolver)
 

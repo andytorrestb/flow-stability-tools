@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from components.baseflow import evaluate_baseflow
+from domain.baseflow import evaluate_baseflow
 
 
 class TestBaseflowEvaluation(unittest.TestCase):

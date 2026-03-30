@@ -1,5 +1,7 @@
 import numpy as np
-from components.baseflow import evaluate_baseflow
+
+from domain.baseflow import evaluate_baseflow
+
 
 def construct_baseflow_time_series(profile_name, z, t_grid, U_time_modulation=None):
     """
@@ -7,7 +9,7 @@ def construct_baseflow_time_series(profile_name, z, t_grid, U_time_modulation=No
     Optionally, U_time_modulation(t) can be a function to modulate U(z) in time.
     Returns Uzt of shape (len(z), len(t_grid)).
     """
-    U = evaluate_baseflow(profile_name, z)["U"].real  # shape (len(z),)
+    U = evaluate_baseflow(profile_name, z)["U"].real
     if U_time_modulation is None:
         Uzt = np.tile(U[:, None], (1, len(t_grid)))
     else:

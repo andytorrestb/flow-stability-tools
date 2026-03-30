@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import numpy as np
 
-from components.rayleigh import solve_rayleigh_for_alpha
+from solvers.rayleigh import solve_rayleigh_for_alpha
 
 
 def alpha_scan(
@@ -17,7 +17,6 @@ def alpha_scan(
     dominant_freq: list[float] = []
     dominant_omega_real: list[float] = []
     dominant_omega_imag: list[float] = []
-
 
     dominant_eigenfunctions: list[np.ndarray | None] = []
     for alpha in alpha_values:

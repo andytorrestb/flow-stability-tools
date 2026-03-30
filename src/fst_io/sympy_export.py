@@ -28,11 +28,6 @@ def export_sympy_pdf(
     output_path: Path,
     title: str = "Symbolic Expressions Summary"
 ) -> None:
-    """
-    Export symbolic expressions for each profile to a formatted PDF.
-    sympy_data: Dict[profile_name, Dict[str, str]]
-    output_path: Path to save the PDF
-    """
     c = canvas.Canvas(str(output_path), pagesize=letter)
     width, height = letter
     margin = 40

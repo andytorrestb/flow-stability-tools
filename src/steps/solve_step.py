@@ -3,9 +3,9 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from components.plotting import create_scan_plots
-from components.artifacts import ArtifactManager
-from components.solver_registry import get_solver
+from fst_io.plotting import create_scan_plots
+from fst_io.artifacts import ArtifactManager
+from solvers.solver_registry import get_solver
 from core.results import scan_result_to_dict
 from config.schema import SimulationConfig
 from core.case import Case

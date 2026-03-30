@@ -54,7 +54,11 @@ For each configured profile, the case computes:
 - src/config: schema and config loading
 - src/core: case/context/state models
 - src/pipeline: pipeline and step interfaces
-- src/components: baseflow, spectral operators, Rayleigh solve, scanning, plotting
+- src/domain: baseflow profiles and behavior notes
+- src/numerics: Chebyshev operators and time-series reconstruction utilities
+- src/solvers: Rayleigh solver, alpha scan, solver interface + registry
+- src/analysis: analysis registry/strategies and profile summary helpers
+- src/fst_io: artifact manager, plotting, VTK/time-series export, SymPy PDF export
 - src/steps: setup, solve, analysis
 - src/runners: case runner orchestration
 - cases/case_001: runnable example case

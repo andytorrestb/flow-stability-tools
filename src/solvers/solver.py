@@ -4,11 +4,11 @@ from abc import ABC, abstractmethod
 
 import numpy as np
 
-from components.baseflow import evaluate_baseflow
-from components.scan import alpha_scan
-from components.spectral import chebyshev_matrices
-from core.results import ProfileScanResult, ScanResult
 from config.schema import SimulationConfig
+from domain.baseflow import PROFILE_BEHAVIOR_NOTES, evaluate_baseflow
+from numerics.spectral import chebyshev_matrices
+from solvers.scan import alpha_scan
+from core.results import ProfileScanResult, ScanResult
 
 
 class Solver(ABC):
@@ -19,15 +19,6 @@ class Solver(ABC):
 
 class RayleighStudySolver(Solver):
     """Run profile-wise alpha scans for the inviscid Rayleigh equation."""
-
-    _PROFILE_BEHAVIOR_NOTES = {
-        "tanh_shear": "Inflectional profile may show unstable alpha band.",
-        "parabolic": "No inflection point; robust inviscid instability is not expected.",
-        "bickley_jet": "Jet profile with central shear can support unstable modes.",
-        "wake_deficit": "Wake deficit profile can exhibit shear-driven instability branches.",
-        "asymmetric_mixing_layer": "Unequal stream speeds can shift dominant growth and frequency.",
-        "double_shear_layer": "Two coupled shear interfaces can produce mode competition.",
-    }
 
     def __init__(self, config: SimulationConfig) -> None:
         self.config = config
@@ -43,7 +34,6 @@ class RayleighStudySolver(Solver):
         z, _D, D2 = chebyshev_matrices(N=N, L=numerical.L)
         baseflow = evaluate_baseflow(profile_name=profile_name, z_grid=z)
 
-        # Ensure U and Upp are real-valued lists for JSON
         def to_real_list(arr):
             return [float(np.real(x)) for x in arr]
 
@@ -55,7 +45,6 @@ class RayleighStudySolver(Solver):
             magnitude_threshold=numerical.eigenvalue_mag_threshold,
         )
 
-        # Recursively convert any complex numbers in scan_result to floats or lists
         def sanitize(obj):
             if isinstance(obj, dict):
                 return {k: sanitize(v) for k, v in obj.items()}
@@ -67,8 +56,6 @@ class RayleighStudySolver(Solver):
                 return obj
 
         scan_result_sanitized = sanitize(scan_result)
-
-        # Extract the dominant eigenfunction for the most unstable mode
         eigenfunction_star = scan_result_sanitized["summary"].get("eigenfunction_star")
 
         return ProfileScanResult(
@@ -111,7 +98,7 @@ class RayleighStudySolver(Solver):
             profile_results[profile_name] = self._scan_profile(profile_name, self.config.numerical.N)
 
         expected_behavior = {
-            profile_name: self._PROFILE_BEHAVIOR_NOTES.get(profile_name, "No note available.")
+            profile_name: PROFILE_BEHAVIOR_NOTES.get(profile_name, "No note available.")
             for profile_name in self.config.solver.profiles
         }
 

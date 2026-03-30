@@ -2,14 +2,14 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 
-from components.analysis_helpers import (
+from analysis.helpers import (
     SympyExportBundle,
     build_profile_summary,
     export_static_vtk,
     export_sympy_pdf_if_enabled,
     export_time_series_artifacts,
 )
-from components.artifacts import ArtifactManager
+from fst_io.artifacts import ArtifactManager
 from core.results import AnalysisSummary, analysis_summary_to_dict, scan_result_to_dict
 
 

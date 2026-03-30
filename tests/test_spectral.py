@@ -1,7 +1,7 @@
 import unittest
 import numpy as np
 
-from components.spectral import chebyshev_matrices
+from numerics.spectral import chebyshev_matrices
 
 
 class TestSpectralMatrices(unittest.TestCase):

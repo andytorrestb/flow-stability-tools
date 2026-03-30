@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from components.analysis_registry import get_analysis_registry
-from components.artifacts import ArtifactManager
+from analysis.registry import get_analysis_registry
+from fst_io.artifacts import ArtifactManager
 from config.schema import SimulationConfig
 from core.case import Case
 from core.context import PipelineContext

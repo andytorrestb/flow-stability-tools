@@ -4,6 +4,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
+from fst_io.sympy_export import export_sympy_pdf
+from fst_io.vtk_export import export_profile_to_vtk
+from numerics.time_series import reconstruct_time_series, reconstruct_velocity_time_series
+from numerics.spectral import chebyshev_matrices
+from fst_io.time_series_export import export_time_series_vtk
+
 
 @dataclass(slots=True)
 class SympyExportBundle:
@@ -62,14 +68,11 @@ def build_profile_summary(
 def export_sympy_pdf_if_enabled(sympy_bundle: SympyExportBundle, output_path: Path) -> None:
     if not sympy_bundle.enabled or not sympy_bundle.latex_by_profile:
         return
-    from components.export import export_sympy_pdf
-
     export_sympy_pdf(sympy_bundle.latex_by_profile, output_path)
 
 
 def export_static_vtk(profile_name: str, profile_payload: Dict[str, Any], vtk_path: Path) -> None:
     import numpy as np
-    from components.vtk_export import export_profile_to_vtk
 
     z = np.array(profile_payload["z"])
     if "U" not in profile_payload or "Upp" not in profile_payload:
@@ -122,12 +125,6 @@ def export_time_series_artifacts(
     export_time_series_mp4_enabled: bool,
 ) -> None:
     import numpy as np
-    from components.spectral import chebyshev_matrices
-    from components.time_series_export import (
-        reconstruct_time_series,
-        reconstruct_velocity_time_series,
-        export_time_series_vtk,
-    )
 
     if not export_vtk_enabled:
         return
@@ -146,7 +143,7 @@ def export_time_series_artifacts(
 
     try:
         _z_ref, D, _D2 = chebyshev_matrices(N=len(z) - 1, L=numerical_L)
-    except Exception as e:  # pragma: no cover - safety net
+    except Exception as e:
         raise RuntimeError(f"Failed to build derivative matrix for time series export: {e}")
 
     qzt = reconstruct_time_series(
@@ -181,7 +178,7 @@ def export_time_series_artifacts(
     try:
         from visualization.baseflow_time_series_plot import plot_baseflow_time_series_to_mp4
         from visualization.vtk_time_series_plot import plot_vtk_time_series_to_mp4
-    except Exception as e:  # pragma: no cover - avoids hard failure in headless env
+    except Exception as e:
         print(f"[Time Series MP4 Export] Skipped for {profile_name}: {e}")
         return
 
@@ -222,5 +219,5 @@ def export_time_series_artifacts(
             initial_profile=initial_profile,
             initial_profile_label=initial_profile_label,
         )
-    except Exception as e:  # pragma: no cover - runtime visualization guard
+    except Exception as e:
         print(f"[Time Series MP4 Export] Failed for {profile_name}: {e}")

@@ -3,6 +3,16 @@ from __future__ import annotations
 import numpy as np
 import sympy as sp
 
+# Expected qualitative behavior notes by profile; used by solvers for reporting.
+PROFILE_BEHAVIOR_NOTES: dict[str, str] = {
+    "tanh_shear": "Inflectional profile may show unstable alpha band.",
+    "parabolic": "No inflection point; robust inviscid instability is not expected.",
+    "bickley_jet": "Jet profile with central shear can support unstable modes.",
+    "wake_deficit": "Wake deficit profile can exhibit shear-driven instability branches.",
+    "asymmetric_mixing_layer": "Unequal stream speeds can shift dominant growth and frequency.",
+    "double_shear_layer": "Two coupled shear interfaces can produce mode competition.",
+}
+
 
 def baseflow_symbolic(profile_name: str) -> tuple[sp.Symbol, sp.Expr, sp.Expr, sp.Expr]:
     """Return symbolic z, U, U', U'' for a supported baseflow profile."""

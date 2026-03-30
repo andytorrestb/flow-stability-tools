@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Callable, Dict
 
-from components.solver import RayleighStudySolver, Solver
 from config.schema import SimulationConfig
+from solvers.solver import RayleighStudySolver, Solver
 
 
 SolverFactory = Callable[[SimulationConfig], Solver]

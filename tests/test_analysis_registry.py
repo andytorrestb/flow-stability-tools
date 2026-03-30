@@ -3,8 +3,8 @@ import tempfile
 import unittest
 from pathlib import Path
 
-from components.analysis_registry import get_analysis_registry
-from components.artifacts import ArtifactManager
+from analysis.registry import get_analysis_registry
+from io.artifacts import ArtifactManager
 from config.schema import SimulationConfig
 from core.case import Case
 from core.context import PipelineContext
