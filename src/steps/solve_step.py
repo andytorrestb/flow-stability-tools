@@ -5,9 +5,10 @@ from pathlib import Path
 
 from components.plotting import create_scan_plots
 from components.solver import RayleighStudySolver
+from core.results import scan_result_to_dict
 from config.schema import SimulationConfig
 from core.case import Case
-from core.context import Context
+from core.context import PipelineContext
 from pipeline.step import Step
 
 
@@ -17,22 +18,23 @@ class SolveStep(Step):
     def __init__(self, config: SimulationConfig) -> None:
         self.config = config
 
-    def run(self, case: Case, context: Context) -> None:
+    def run(self, case: Case, context: PipelineContext) -> None:
         solver = RayleighStudySolver(self.config)
         result = solver.solve()
-        context.set_result("scan_results", result)
+        context.scan_results = result
 
         output_path = Path(case.results_dir) / "scan_results.json"
+        scan_payload = scan_result_to_dict(result)
         with output_path.open("w", encoding="utf-8") as handle:
-            json.dump(result, handle, indent=2)
+            json.dump(scan_payload, handle, indent=2)
 
         plot_artifacts: dict[str, str] = {}
         if self.config.output.enable_plots:
             plot_artifacts = create_scan_plots(
-                profile_results=result["profiles"],
+                profile_results=scan_payload["profiles"],
                 output_dir=Path(case.results_dir),
                 growth_filename=self.config.output.growth_plot_filename,
                 frequency_filename=self.config.output.frequency_plot_filename,
             )
 
-        context.set_result("plot_artifacts", plot_artifacts)
+        context.plot_artifacts = plot_artifacts

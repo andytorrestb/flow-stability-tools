@@ -1,22 +1,16 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Any
+from pathlib import Path
+from typing import Dict, Optional
+
+from core.results import AnalysisSummary, ScanResult
 
 
 @dataclass(slots=True)
-class Context:
-    data: dict[str, Any] = field(default_factory=dict)
-    results: dict[str, Any] = field(default_factory=dict)
-
-    def set_data(self, key: str, value: Any) -> None:
-        self.data[key] = value
-
-    def get_data(self, key: str) -> Any:
-        return self.data[key]
-
-    def set_result(self, key: str, value: Any) -> None:
-        self.results[key] = value
-
-    def get_result(self, key: str) -> Any:
-        return self.results[key]
+class PipelineContext:
+    started_at: Optional[str] = None
+    metadata_path: Optional[Path] = None
+    scan_results: Optional[ScanResult] = None
+    analysis: Optional[AnalysisSummary] = None
+    plot_artifacts: Dict[str, str] = field(default_factory=dict)

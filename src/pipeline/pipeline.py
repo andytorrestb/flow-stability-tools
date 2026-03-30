@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from core.case import Case
-from core.context import Context
+from core.context import PipelineContext
 from core.state import CaseState
 from pipeline.step import Step
 
@@ -12,7 +12,7 @@ from pipeline.step import Step
 class Pipeline:
     steps: list[Step]
 
-    def run(self, case: Case, context: Context) -> None:
+    def run(self, case: Case, context: PipelineContext) -> None:
         case.set_state(CaseState.RUNNING)
         for step in self.steps:
             step.run(case, context)

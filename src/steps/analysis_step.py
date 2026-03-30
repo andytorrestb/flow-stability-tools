@@ -4,9 +4,10 @@ import json
 from datetime import datetime, timezone
 from pathlib import Path
 
+from core.results import AnalysisSummary, analysis_summary_to_dict, scan_result_to_dict
 from config.schema import SimulationConfig
 from core.case import Case
-from core.context import Context
+from core.context import PipelineContext
 from pipeline.step import Step
 
 
@@ -17,7 +18,7 @@ class AnalysisStep(Step):
         self.config = config
 
 
-    def run(self, case: Case, context: Context) -> None:
+    def run(self, case: Case, context: PipelineContext) -> None:
         from components.export import export_sympy_pdf
         from components.vtk_export import export_profile_to_vtk
         from components.time_series_export import (
@@ -27,8 +28,11 @@ class AnalysisStep(Step):
         )
         from components.spectral import chebyshev_matrices
         import numpy as np
-        scan_results = context.get_result("scan_results")
-        profiles = scan_results["profiles"]
+        if context.scan_results is None:
+            raise RuntimeError("scan_results missing in context")
+
+        scan_payload = scan_result_to_dict(context.scan_results)
+        profiles = scan_payload["profiles"]
 
         include_symbolic = self.config.output.include_symbolic_in_profile_summaries
         include_latex = self.config.output.include_symbolic_latex
@@ -233,28 +237,27 @@ class AnalysisStep(Step):
             pdf_path = Path(case.results_dir) / sympy_pdf_filename
             export_sympy_pdf(sympy_latex_data, pdf_path)
 
-        analysis_payload = {
-            "temporal_convention": scan_results["temporal_convention"],
-            "equation": scan_results["equation"],
-            "expected_behavior": scan_results["expected_behavior"],
-            "profiles": summaries,
-            "refinement": scan_results["refinement"],
-            "notes": [
+        analysis_summary = AnalysisSummary(
+            temporal_convention=scan_payload["temporal_convention"],
+            equation=scan_payload["equation"],
+            expected_behavior=scan_payload["expected_behavior"],
+            profiles=summaries,
+            refinement=scan_payload["refinement"],
+            notes=[
                 "tanh_shear may exhibit an unstable band depending on N/L and alpha range.",
                 "parabolic has no inflection point, so strong positive growth should be treated with caution.",
                 "Always test sensitivity to N and L before drawing physical conclusions.",
             ],
-        }
+        )
 
-        context.set_result("analysis", analysis_payload)
+        context.analysis = analysis_summary
 
         summary_path = Path(case.results_dir) / "profile_summaries.json"
         with summary_path.open("w", encoding="utf-8") as handle:
-            json.dump(analysis_payload, handle, indent=2)
+            json.dump(analysis_summary_to_dict(analysis_summary), handle, indent=2)
 
-        metadata_path_raw = context.data.get("metadata_path")
-        if metadata_path_raw:
-            metadata_path = Path(metadata_path_raw)
+        metadata_path = context.metadata_path
+        if metadata_path:
             with metadata_path.open("r", encoding="utf-8") as handle:
                 metadata = json.load(handle)
             metadata["completed_at"] = datetime.now(timezone.utc).isoformat()

@@ -7,6 +7,7 @@ import numpy as np
 from components.baseflow import evaluate_baseflow
 from components.scan import alpha_scan
 from components.spectral import chebyshev_matrices
+from core.results import ProfileScanResult, ScanResult
 from config.schema import SimulationConfig
 
 
@@ -35,7 +36,7 @@ class RayleighStudySolver(Solver):
         alpha_cfg = self.config.alpha_scan
         return np.linspace(alpha_cfg.alpha_min, alpha_cfg.alpha_max, alpha_cfg.alpha_count)
 
-    def _scan_profile(self, profile_name: str, N: int) -> dict:
+    def _scan_profile(self, profile_name: str, N: int) -> ProfileScanResult:
         numerical = self.config.numerical
         alpha_values = self._alpha_values()
 
@@ -70,14 +71,14 @@ class RayleighStudySolver(Solver):
         # Extract the dominant eigenfunction for the most unstable mode
         eigenfunction_star = scan_result_sanitized["summary"].get("eigenfunction_star")
 
-        return {
-            "z": to_real_list(z),
-            "U": to_real_list(baseflow["U"]),
-            "Upp": to_real_list(baseflow["Upp"]),
-            "sympy": baseflow["symbolic"],
-            "scan": scan_result_sanitized,
-            "dominant_eigenfunction": eigenfunction_star,
-        }
+        return ProfileScanResult(
+            z=to_real_list(z),
+            U=to_real_list(baseflow["U"]),
+            Upp=to_real_list(baseflow["Upp"]),
+            sympy=baseflow["symbolic"],
+            scan=scan_result_sanitized,
+            dominant_eigenfunction=eigenfunction_star,
+        )
 
     def _refinement_check(self) -> dict:
         refine_cfg = self.config.refinement
@@ -88,8 +89,8 @@ class RayleighStudySolver(Solver):
         finer_n = refine_cfg.N_base * refine_cfg.multiplier
         fine_payload = self._scan_profile(refine_cfg.profile, finer_n)
 
-        g_base = base_payload["scan"]["summary"]["growth_rate"]
-        g_fine = fine_payload["scan"]["summary"]["growth_rate"]
+        g_base = base_payload.scan["summary"]["growth_rate"]
+        g_fine = fine_payload.scan["summary"]["growth_rate"]
 
         return {
             "enabled": True,
@@ -105,7 +106,7 @@ class RayleighStudySolver(Solver):
         }
 
     def solve(self) -> dict:
-        profile_results: dict[str, dict] = {}
+        profile_results: dict[str, ProfileScanResult] = {}
         for profile_name in self.config.solver.profiles:
             profile_results[profile_name] = self._scan_profile(profile_name, self.config.numerical.N)
 
@@ -114,10 +115,10 @@ class RayleighStudySolver(Solver):
             for profile_name in self.config.solver.profiles
         }
 
-        return {
-            "temporal_convention": "q'(x,z,t)=q_hat(z)*exp(i(alpha*x-omega*t)); growth=Im(omega), frequency=Re(omega)",
-            "equation": "(U-c)(phi''-alpha^2*phi)-U''*phi=0, c=omega/alpha",
-            "expected_behavior": expected_behavior,
-            "profiles": profile_results,
-            "refinement": self._refinement_check(),
-        }
+        return ScanResult(
+            temporal_convention="q'(x,z,t)=q_hat(z)*exp(i(alpha*x-omega*t)); growth=Im(omega), frequency=Re(omega)",
+            equation="(U-c)(phi''-alpha^2*phi)-U''*phi=0, c=omega/alpha",
+            expected_behavior=expected_behavior,
+            profiles=profile_results,
+            refinement=self._refinement_check(),
+        )
