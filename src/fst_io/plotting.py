@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import textwrap
 from pathlib import Path
 
 import matplotlib.pyplot as plt
@@ -54,6 +55,23 @@ def _prepare_peak_points(profile_results: dict[str, dict[str, list[float] | dict
         freq_star = float(freq[idx]) if np.isfinite(freq[idx]) else float("nan")
         peak_points[profile_name] = (alpha_star, growth_star, freq_star)
     return peak_points
+
+
+def _prepare_frequency_peak_points(profile_results: dict[str, dict[str, list[float] | dict[str, float]]]):
+    frequency_peak_points: dict[str, tuple[float, float]] = {}
+    for profile_name, payload in profile_results.items():
+        alpha = np.asarray(payload["scan"]["alpha"], dtype=float)
+        freq = np.asarray(payload["scan"]["dominant_frequency"], dtype=float)
+        finite_mask = np.isfinite(alpha) & np.isfinite(freq)
+        if not np.any(finite_mask):
+            continue
+        valid_idx = np.where(finite_mask)[0]
+        local_idx = int(np.argmax(freq[finite_mask]))
+        idx = int(valid_idx[local_idx])
+        alpha_peak = float(alpha[idx])
+        freq_peak = float(freq[idx])
+        frequency_peak_points[profile_name] = (alpha_peak, freq_peak)
+    return frequency_peak_points
 
 
 def _annotate_growth(ax: plt.Axes, growth_summary_lines: list[list[str]]) -> None:
@@ -158,6 +176,18 @@ def _format_peak_summary_block(display_name: str, alpha_star: float, growth_star
     ]
 
 
+def _format_frequency_peak_summary_block(display_name: str, alpha_peak: float, freq_peak: float) -> list[str]:
+    return [
+        display_name,
+        "Maximum temporal frequency coordinate:",
+        rf"$\alpha_f = {alpha_peak:.3f},\ \Re(\omega_f) = {freq_peak:.3e}$",
+        "Wavenumber at maximum temporal frequency:",
+        rf"$\alpha_f = {alpha_peak:.3f}$",
+        "Maximum temporal frequency:",
+        rf"$\Re(\omega_f) = {freq_peak:.3e}$",
+    ]
+
+
 def _draw_summary_blocks(ax: plt.Axes, summary_blocks: list[list[str]]) -> None:
     if not summary_blocks:
         ax.text(
@@ -250,14 +280,26 @@ def _add_readable_legend(
         "framealpha": 0.96,
         "facecolor": "white",
         "edgecolor": "#bbbbbb",
-        "labelspacing": 0.35,
+        "labelspacing": 0.44,
         "handlelength": 2.0,
-        "borderpad": 0.4,
+        "handletextpad": 0.82,
+        "borderpad": 0.58,
+        "fontsize": 9.3,
+        "title_fontsize": 11,
     }
+
+    wrapped_labels = [textwrap.fill(label, width=34, break_long_words=False) for label in unique_labels]
 
     legend_ax = target_ax if target_ax is not None else ax
     if target_ax is not None:
-        legend = legend_ax.legend(unique_handles, unique_labels, loc="lower left", **legend_kwargs)
+        legend = legend_ax.legend(
+            unique_handles,
+            wrapped_labels,
+            loc="lower center",
+            bbox_to_anchor=(0.04, 0.02, 0.92, 0.24),
+            borderaxespad=0.0,
+            **legend_kwargs,
+        )
         legend.get_title().set_fontweight("bold")
         legend.get_title().set_ha("center")
         try:
@@ -267,11 +309,11 @@ def _add_readable_legend(
         return
 
     if len(unique_labels) <= max_inside_entries:
-        legend_ax.legend(unique_handles, unique_labels, loc="best", **legend_kwargs)
+        legend_ax.legend(unique_handles, wrapped_labels, loc="best", **legend_kwargs)
     else:
         legend_ax.legend(
             unique_handles,
-            unique_labels,
+            wrapped_labels,
             loc="upper left",
             bbox_to_anchor=(1.02, 1.0),
             borderaxespad=0.0,
@@ -292,6 +334,7 @@ def create_scan_plots(
     freq_path = output_dir / frequency_filename
 
     peak_points = _prepare_peak_points(profile_results)
+    frequency_peak_points = _prepare_frequency_peak_points(profile_results)
     growth_summary_lines: list[list[str]] = []
     ordered_profiles = list(profile_results.keys())
     profile_styles = {name: _series_style(i) for i, name in enumerate(ordered_profiles)}
@@ -348,8 +391,8 @@ def create_scan_plots(
         linewidth=1,
         label="Neutral stability boundary",
     )
-    ax_g.set_xlabel(r"Streamwise wavenumber, $\alpha$")
-    ax_g.set_ylabel(r"Temporal growth rate, Im($\omega$)")
+    ax_g.set_xlabel(r"Nondimensional streamwise wavenumber, $\alpha$")
+    ax_g.set_ylabel(r"Nondimensional temporal growth rate, Im($\omega$)")
     ax_g.set_title("Temporal growth rate of the most unstable mode")
     _add_readable_legend(
         ax_g,
@@ -371,7 +414,7 @@ def create_scan_plots(
     )
     ax_f.set_facecolor("#ffffff")
     _format_side_panel(ax_f_panel, "Peak-Mode Summary")
-    alpha_star_reference_labeled = False
+    alpha_frequency_reference_labeled = False
     peak_frequency_proxy = Line2D(
         [0],
         [0],
@@ -398,38 +441,37 @@ def create_scan_plots(
             label=display_name,
         )
 
-        peak = peak_points.get(profile_name)
+        peak = frequency_peak_points.get(profile_name)
         if peak is not None:
-            alpha_star, growth_star, freq_star = peak
+            alpha_freq_peak, freq_peak = peak
             vline_label = (
-                "Most amplified wavenumber alpha*"
-                if not alpha_star_reference_labeled
+                "Wavenumber at maximum temporal frequency"
+                if not alpha_frequency_reference_labeled
                 else None
             )
             ax_f.axvline(
-                alpha_star,
+                alpha_freq_peak,
                 linestyle=":",
                 linewidth=1.2,
                 alpha=0.8,
                 color=line.get_color(),
                 label=vline_label,
             )
-            alpha_star_reference_labeled = True
-            if np.isfinite(freq_star):
-                _plot_peak_marker(ax_f, alpha_star, freq_star, zorder=6)
+            alpha_frequency_reference_labeled = True
+            _plot_peak_marker(ax_f, alpha_freq_peak, freq_peak, zorder=6)
             freq_summary_lines.append(
-                _format_peak_summary_block(display_name, alpha_star, growth_star, freq_star)
+                _format_frequency_peak_summary_block(display_name, alpha_freq_peak, freq_peak)
             )
 
     _format_publication_axes(ax_f)
-    ax_f.set_xlabel(r"Streamwise wavenumber, $\alpha$")
-    ax_f.set_ylabel(r"Temporal frequency, Re($\omega$)")
-    ax_f.set_title("Temporal frequency of the most unstable mode")
+    ax_f.set_xlabel(r"Nondimensional streamwise wavenumber, $\alpha$")
+    ax_f.set_ylabel(r"Nondimensional temporal frequency, Re($\omega$)")
+    ax_f.set_title("Temporal frequency of the most unstable mode (maximum highlighted)")
     _add_readable_legend(
         ax_f,
         title="Mean-Flow Profiles",
         target_ax=ax_f_panel,
-        extra_items=[(peak_frequency_proxy, "Peak growth coordinate")],
+        extra_items=[(peak_frequency_proxy, "Maximum temporal frequency coordinate")],
     )
     ax_f.ticklabel_format(axis="y", style="sci", scilimits=(-2, 3))
     _annotate_frequency(ax_f_panel, freq_summary_lines)
